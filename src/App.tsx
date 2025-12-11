@@ -18,6 +18,8 @@ import {
 import { WalletModalProvider } from "@tronweb3/tronwallet-adapter-react-ui";
 import { WalletProvider } from "@tronweb3/tronwallet-adapter-react-hooks";
 import Demo from "./demo";
+import { useRef } from "react";
+import { WalletReadyState, type Adapter } from "@tronweb3/tronwallet-abstract-adapter";
 
 function App() {
   const adapters = useMemo(
@@ -38,9 +40,26 @@ function App() {
     []
   );
 
+  const isFirstSelectAdapter = useRef(true);
+  function handleAdapterChanged(adapter: Adapter | null) {
+    if (!adapter) return;
+    if (isFirstSelectAdapter.current) {
+      // When page is first loaded, disable open wallet website
+      isFirstSelectAdapter.current = false;
+      return;
+    }
+    if (adapter.readyState === WalletReadyState.NotFound) {
+      window.open(adapter.url, "_blank");
+    }
+    adapter.once("readyStateChanged", (readyState) => {
+      if (readyState === WalletReadyState.NotFound) {
+        window.open(adapter.url, "_blank");
+      }
+    });
+  }
   return (
     <>
-      <WalletProvider adapters={adapters} autoConnect>
+      <WalletProvider adapters={adapters} autoConnect onAdapterChanged={handleAdapterChanged}>
         <WalletModalProvider>
           <Demo />
         </WalletModalProvider>
